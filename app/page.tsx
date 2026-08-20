@@ -2,11 +2,11 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Grid, type CellState } from "@/components/Grid";
-import { Rules } from "@/components/Rules";
 import { ShareButton } from "@/components/ShareButton";
 import { puzzleDateForInstant, puzzleNumber } from "@/lib/epoch";
 import { GRID_SIZE } from "@/lib/generator";
 import { isOnGrid, manhattan } from "@/lib/manhattan";
+import { closestDistance } from "@/lib/proximity";
 import { seedForDate } from "@/lib/seed";
 import type { TapRecord } from "@/lib/share";
 
@@ -63,6 +63,20 @@ export default function Home() {
 
   const finished = locked;
   const tapsRemaining = MAX_TAPS - taps.length;
+  const closest = closestDistance(taps);
+
+  let status: string;
+  if (finished) {
+    if (won) {
+      status = "Signal found.";
+    } else if (closest !== null) {
+      status = `Closest: ${closest}`;
+    } else {
+      status = "Out of taps.";
+    }
+  } else {
+    status = `${tapsRemaining} tap${tapsRemaining === 1 ? "" : "s"} left`;
+  }
 
   return (
     <main>
@@ -71,17 +85,24 @@ export default function Home() {
         <span className="puzzle-id">#{puzzleNum}</span>
       </header>
 
-      <Rules />
+      <p className="tagline">4 taps · 0 wins</p>
 
-      <p className="status" aria-live="polite">
-        {finished
-          ? won
-            ? "Signal found."
-            : "Out of taps."
-          : `${tapsRemaining} tap${tapsRemaining === 1 ? "" : "s"} left`}
+      <Grid
+        cellStates={cellStates}
+        locked={locked}
+        onCellTap={onCellTap}
+        hidden={hidden}
+        revealHidden={finished && !won}
+      />
+
+      <p
+        className={["status", finished && !won ? "status-lose" : ""]
+          .filter(Boolean)
+          .join(" ")}
+        aria-live="polite"
+      >
+        {status}
       </p>
-
-      <Grid cellStates={cellStates} locked={locked} onCellTap={onCellTap} />
 
       <ShareButton
         dateStr={dateStr}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { buildShareImage } from "@/lib/shareImage";
 import { buildShareText, type TapRecord } from "@/lib/share";
 
 type ShareButtonProps = {
@@ -15,12 +16,34 @@ export function ShareButton({ dateStr, taps, won, finished }: ShareButtonProps) 
 
   const handleShare = useCallback(async () => {
     const text = buildShareText({ dateStr, taps, won });
+
     try {
-      await navigator.clipboard.writeText(text);
+      const imageBlob = await buildShareImage({ dateStr, taps, won });
+
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": imageBlob,
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          }),
+        ]);
+      } else if (navigator.share && navigator.canShare?.({ files: [new File([imageBlob], "ping.png", { type: "image/png" })] })) {
+        const file = new File([imageBlob], "ping.png", { type: "image/png" });
+        await navigator.share({ text, files: [file] });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      /* clipboard unavailable */
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } catch {
+        /* clipboard unavailable */
+      }
     }
   }, [dateStr, taps, won]);
 
