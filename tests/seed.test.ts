@@ -5,7 +5,7 @@ import { isCenterForbidden } from "@/lib/generator";
 
 describe("seed", () => {
   it("uses forced H=(5,5) for test scoring only", () => {
-    const h = seedForDate("2025-06-01", { force: forcedH(5, 5) });
+    const h = seedForDate("2025-06-01", 12, { force: forcedH(5, 5) });
     expect(h).toEqual([5, 5]);
   });
 
@@ -14,8 +14,8 @@ describe("seed", () => {
   });
 
   it("published seed for a date is deterministic", () => {
-    const a = seedForDate("2026-08-21");
-    const b = seedForDate("2026-08-21");
+    const a = seedForDate("2026-08-21", 12);
+    const b = seedForDate("2026-08-21", 12);
     expect(a).toEqual(b);
   });
 

@@ -4,11 +4,14 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "PING",
   description:
-    "Find the hidden signal on a 12×12 grid in 4 taps — tap a cell and you get a number; 0 wins.",
+    "Find the hidden signal on three daily grids — 4×4, 6×6, then 12×12 — four taps per board; 0 wins.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
   openGraph: {
     title: "PING",
     description:
-      "Find the hidden signal on a 12×12 grid in 4 taps — tap a cell and you get a number; 0 wins.",
+      "Find the hidden signal on three daily grids — 4×4, 6×6, then 12×12 — four taps per board; 0 wins.",
     type: "website",
   },
 };

@@ -1,4 +1,5 @@
 import type { TapRecord } from "./share";
+import { boardLabel, type BoardSize } from "./boards";
 
 export const TARGET_MARK = "🎯";
 
@@ -8,10 +9,11 @@ export function shareImageCellLabel(tap: TapRecord): string {
   return String(tap.distance);
 }
 
-/** Footer score line on the share card. */
-export function shareImageScoreLine(won: boolean, tapCount: number): string {
-  if (won) return `${tapCount}/4 ${TARGET_MARK}`;
-  return "X/4";
+/** Footer score line for one board on the share card. */
+export function shareImageScoreLine(won: boolean, tapCount: number, size: BoardSize): string {
+  const label = boardLabel(size);
+  if (won) return `${label} ${tapCount}/4 ${TARGET_MARK}`;
+  return `${label} X/4`;
 }
 
 /** True when a tap is the winning hit (distance 0). */

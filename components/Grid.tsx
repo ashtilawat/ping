@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { GRID_SIZE } from "@/lib/generator";
+import type { BoardSize } from "@/lib/boards";
 import type { Cell } from "@/lib/manhattan";
 import { proximityFromDistance } from "@/lib/proximity";
 
@@ -11,6 +11,7 @@ export type CellState = {
 };
 
 type GridProps = {
+  gridSize: BoardSize;
   cellStates: CellState[][];
   locked: boolean;
   onCellTap: (row: number, col: number) => void;
@@ -19,6 +20,7 @@ type GridProps = {
 };
 
 export function Grid({
+  gridSize,
   cellStates,
   locked,
   onCellTap,
@@ -29,15 +31,16 @@ export function Grid({
     revealHidden && hidden !== null && locked;
 
   return (
-    <div className="grid-wrap">
+    <div className="grid-wrap" data-testid={`board-${gridSize}`}>
       <div
         className="grid"
+        data-size={gridSize}
         style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-          gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,
+          gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+          gridTemplateRows: `repeat(${gridSize}, 1fr)`,
         }}
         role="grid"
-        aria-label="PING game board"
+        aria-label={`PING ${gridSize} by ${gridSize} game board`}
       >
         {cellStates.map((row, r) =>
           row.map((cell, c) => {
@@ -46,7 +49,7 @@ export function Grid({
             const isWin = cell.tapped && cell.distance === 0;
             const proximity =
               cell.tapped && cell.distance !== null
-                ? proximityFromDistance(cell.distance)
+                ? proximityFromDistance(cell.distance, gridSize)
                 : undefined;
 
             return (
@@ -59,6 +62,9 @@ export function Grid({
                   isWin ? "win-tap" : "",
                   isHiddenCell ? "hidden-reveal" : "",
                   locked ? "locked" : "",
+                  cell.tapped && cell.distance !== null && cell.distance >= 10
+                    ? "cell-two-digit"
+                    : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}

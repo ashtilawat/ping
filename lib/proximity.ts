@@ -1,7 +1,9 @@
+import { type BoardSize, maxManhattanDistance } from "./boards";
+
 /** Normalized closeness in [0, 1]; 1 = on target (distance 0). */
-export function proximityFromDistance(distance: number): number {
+export function proximityFromDistance(distance: number, gridSize: BoardSize = 12): number {
   if (distance === 0) return 1;
-  const maxD = 22;
+  const maxD = maxManhattanDistance(gridSize);
   return Math.max(0, 1 - distance / maxD);
 }
 
