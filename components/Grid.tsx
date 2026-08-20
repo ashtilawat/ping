@@ -24,23 +24,33 @@ export function Grid({ cellStates, locked, onCellTap }: GridProps) {
       aria-label="PING game board"
     >
       {cellStates.map((row, r) =>
-        row.map((cell, c) => (
-          <button
-            key={`${r}-${c}`}
-            type="button"
-            className={`cell${cell.tapped ? " tapped" : ""}${locked ? " locked" : ""}`}
-            data-testid={`cell-${r}-${c}`}
-            aria-label={
-              cell.tapped
-                ? `Cell row ${r} column ${c}, distance ${cell.distance}`
-                : `Cell row ${r} column ${c}`
-            }
-            disabled={locked}
-            onClick={() => onCellTap(r, c)}
-          >
-            {cell.tapped && cell.distance !== null ? cell.distance : ""}
-          </button>
-        )),
+        row.map((cell, c) => {
+          const isWin = cell.tapped && cell.distance === 0;
+          return (
+            <button
+              key={`${r}-${c}`}
+              type="button"
+              className={[
+                "cell",
+                cell.tapped ? "tapped" : "",
+                isWin ? "win-tap" : "",
+                locked ? "locked" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              data-testid={`cell-${r}-${c}`}
+              aria-label={
+                cell.tapped
+                  ? `Cell row ${r} column ${c}, distance ${cell.distance}`
+                  : `Cell row ${r} column ${c}`
+              }
+              disabled={locked}
+              onClick={() => onCellTap(r, c)}
+            >
+              {cell.tapped && cell.distance !== null ? cell.distance : ""}
+            </button>
+          );
+        }),
       )}
     </div>
   );

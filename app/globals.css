@@ -4,11 +4,16 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  min-height: 100dvh;
   font-family:
     system-ui,
     -apple-system,
@@ -16,74 +21,132 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif;
-  background: #0f1117;
-  color: #e8eaed;
+  background: #12141a;
+  color: #e4e6eb;
+}
+
+body {
+  padding:
+    env(safe-area-inset-top, 0)
+    env(safe-area-inset-right, 0)
+    env(safe-area-inset-bottom, 0)
+    env(safe-area-inset-left, 0);
 }
 
 main {
-  max-width: 520px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
-  padding: 1.5rem 1rem 2.5rem;
+  padding: 0.75rem 0.625rem 1.25rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
+  align-items: stretch;
+  gap: 0.625rem;
+  min-height: 100dvh;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.625rem;
 }
 
 h1 {
   margin: 0;
-  font-size: 2rem;
-  letter-spacing: 0.2em;
+  font-size: 1.375rem;
+  letter-spacing: 0.18em;
   font-weight: 700;
+  color: #e4e6eb;
+}
+
+.puzzle-id {
+  font-size: 0.8125rem;
+  color: #8b919a;
+  letter-spacing: 0.02em;
+}
+
+.rules-block {
+  text-align: center;
+  padding: 0 0.25rem;
 }
 
 .rules {
   margin: 0;
-  text-align: center;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: #b0b8c4;
-  max-width: 36ch;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #a8adb5;
+}
+
+.example {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #6e737a;
 }
 
 .status {
   margin: 0;
-  font-size: 0.9rem;
-  color: #8a93a3;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #8b919a;
 }
 
 .grid {
   display: grid;
-  gap: 3px;
-  width: min(100%, 420px);
+  gap: 2px;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  align-self: center;
   aspect-ratio: 1;
+  touch-action: manipulation;
 }
 
 .cell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #2a3140;
-  border-radius: 4px;
-  background: #1a1f2b;
-  color: #7dd3fc;
-  font-size: clamp(0.65rem, 2.5vw, 0.9rem);
+  border: 1px solid #2c3038;
+  border-radius: 3px;
+  background: #1a1d24;
+  color: #e4e6eb;
+  font-size: clamp(0.6875rem, 2.8vw, 0.9375rem);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
   padding: 0;
   min-width: 0;
   min-height: 0;
-  transition: background 0.15s;
+  min-height: 28px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.cell:hover:not(:disabled) {
-  background: #242b3a;
+.cell:active:not(:disabled) {
+  background: #23272f;
 }
 
 .cell.tapped {
-  background: #1e3a5f;
-  border-color: #3b82f6;
-  color: #bae6fd;
+  background: #1a1d24;
+  border-color: #5c6370;
+  color: #e4e6eb;
+}
+
+/* Non-color mark: ring shows tap even without reading the number */
+.cell.tapped::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 2px solid #9aa3b0;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.cell.win-tap::after {
+  border-color: #c8ccd2;
+  border-width: 2px;
 }
 
 .cell.locked {
@@ -91,36 +154,44 @@ h1 {
 }
 
 .cell:disabled:not(.tapped) {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 
+.share-panel {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  width: 100%;
+}
+
 .share-button {
-  margin-top: 0.5rem;
-  padding: 0.65rem 1.75rem;
-  border: none;
-  border-radius: 6px;
-  background: #3b82f6;
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.share-button:hover {
-  background: #2563eb;
-}
-
-.result {
-  margin: 0;
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #3d4450;
+  border-radius: 8px;
+  background: #252932;
+  color: #e4e6eb;
   font-size: 1rem;
   font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.result.win {
-  color: #4ade80;
+.share-button:active {
+  background: #2e333d;
 }
 
-.result.lose {
-  color: #f87171;
+@media (min-width: 420px) {
+  main {
+    max-width: 420px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .grid {
+    max-width: 400px;
+  }
 }

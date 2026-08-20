@@ -1,8 +1,10 @@
 export function Rules() {
   return (
-    <p className="rules">
-      Find the hidden signal on a 12×12 grid in 4 taps — tap a cell → you get a
-      number; 0 wins.
-    </p>
+    <div className="rules-block">
+      <p className="rules">
+        Find the hidden signal in 4 taps — tap a cell, get a number; 0 wins.
+      </p>
+      <p className="example">Example: tap → 7 means you&apos;re 7 steps away.</p>
+    </div>
   );
 }

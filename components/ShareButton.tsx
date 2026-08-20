@@ -18,7 +18,7 @@ export function ShareButton({ dateStr, taps, won, finished }: ShareButtonProps) 
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2500);
     } catch {
       /* clipboard unavailable */
     }
@@ -27,8 +27,10 @@ export function ShareButton({ dateStr, taps, won, finished }: ShareButtonProps) 
   if (!finished) return null;
 
   return (
-    <button type="button" className="share-button" onClick={handleShare}>
-      {copied ? "Copied!" : "Share"}
-    </button>
+    <div className="share-panel">
+      <button type="button" className="share-button" onClick={handleShare}>
+        {copied ? "Copied!" : "Copy share card"}
+      </button>
+    </div>
   );
 }

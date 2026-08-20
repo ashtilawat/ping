@@ -66,17 +66,23 @@ export default function Home() {
 
   return (
     <main>
-      <h1>PING</h1>
+      <header className="header">
+        <h1>PING</h1>
+        <span className="puzzle-id">#{puzzleNum}</span>
+      </header>
+
       <Rules />
-      <p className="status">
-        #{puzzleNum} · {tapsRemaining} tap{tapsRemaining === 1 ? "" : "s"} left
+
+      <p className="status" aria-live="polite">
+        {finished
+          ? won
+            ? "Signal found."
+            : "Out of taps."
+          : `${tapsRemaining} tap${tapsRemaining === 1 ? "" : "s"} left`}
       </p>
+
       <Grid cellStates={cellStates} locked={locked} onCellTap={onCellTap} />
-      {finished && (
-        <p className={`result ${won ? "win" : "lose"}`}>
-          {won ? "Signal found!" : "Out of taps."}
-        </p>
-      )}
+
       <ShareButton
         dateStr={dateStr}
         taps={taps}
