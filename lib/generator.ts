@@ -26,6 +26,15 @@ export type GenerateOptions = {
   prevH?: Cell | null;
 };
 
+export type ThreeTapLine = {
+  t1: Cell;
+  t2: Cell;
+  t3: Cell;
+  d1: number;
+  d2: number;
+  d3: number;
+};
+
 function allCells(): Cell[] {
   const cells: Cell[] = [];
   for (let r = 0; r < GRID_SIZE; r++) {
@@ -35,6 +44,8 @@ function allCells(): Cell[] {
   }
   return cells;
 }
+
+const ALL_CELLS = allCells();
 
 function hashString(s: string): number {
   let h = 2166136261;
@@ -58,37 +69,82 @@ function isCornerTooFar(h: Cell): boolean {
   return CORNERS.some((corner) => manhattan(h, corner) >= 18);
 }
 
-/**
- * Two cells share a 3-tap distance triple when ≥3 grid cells produce the same
- * distance reading for both hidden positions (equivalently, some ordered tap
- * sequence yields identical distance triples).
- */
-export function sharesThreeTapTriple(h: Cell, other: Cell): boolean {
-  if (h[0] === other[0] && h[1] === other[1]) return false;
-
-  let matches = 0;
-  for (const t of allCells()) {
-    if (manhattan(h, t) === manhattan(other, t)) {
-      matches++;
-      if (matches >= 3) return true;
-    }
-  }
-  return false;
+/** Cells whose Manhattan readings on (t1,t2,t3) equal (d1,d2,d3). */
+export function cellsConsistentWithTriple(
+  t1: Cell,
+  t2: Cell,
+  t3: Cell,
+  d1: number,
+  d2: number,
+  d3: number,
+): Cell[] {
+  return ALL_CELLS.filter(
+    (h) =>
+      manhattan(h, t1) === d1 &&
+      manhattan(h, t2) === d2 &&
+      manhattan(h, t3) === d3,
+  );
 }
 
-export function hasAmbiguousTriple(h: Cell): boolean {
-  for (const other of allCells()) {
-    if (other[0] === h[0] && other[1] === h[1]) continue;
-    if (sharesThreeTapTriple(h, other)) return true;
+/** Some ordered tap triple yields readings consistent with exactly this cell. */
+export function findUniqueThreeTapLine(h: Cell): ThreeTapLine | null {
+  for (let i = 0; i < ALL_CELLS.length; i++) {
+    for (let j = 0; j < ALL_CELLS.length; j++) {
+      if (j === i) continue;
+      for (let k = 0; k < ALL_CELLS.length; k++) {
+        if (k === i || k === j) continue;
+        const t1 = ALL_CELLS[i];
+        const t2 = ALL_CELLS[j];
+        const t3 = ALL_CELLS[k];
+        const d1 = manhattan(h, t1);
+        const d2 = manhattan(h, t2);
+        const d3 = manhattan(h, t3);
+        const matches = cellsConsistentWithTriple(t1, t2, t3, d1, d2, d3);
+        if (matches.length === 1 && matches[0][0] === h[0] && matches[0][1] === h[1]) {
+          return { t1, t2, t3, d1, d2, d3 };
+        }
+      }
+    }
   }
-  return false;
+  return null;
+}
+
+export function hasUniqueThreeTapLine(h: Cell): boolean {
+  return findUniqueThreeTapLine(h) !== null;
+}
+
+/** First tap triple where both cells produce identical (d1,d2,d3). */
+export function findSharedThreeTapLine(a: Cell, b: Cell): ThreeTapLine | null {
+  if (a[0] === b[0] && a[1] === b[1]) return null;
+
+  for (let i = 0; i < ALL_CELLS.length; i++) {
+    for (let j = 0; j < ALL_CELLS.length; j++) {
+      if (j === i) continue;
+      for (let k = 0; k < ALL_CELLS.length; k++) {
+        if (k === i || k === j) continue;
+        const t1 = ALL_CELLS[i];
+        const t2 = ALL_CELLS[j];
+        const t3 = ALL_CELLS[k];
+        const d1a = manhattan(a, t1);
+        const d2a = manhattan(a, t2);
+        const d3a = manhattan(a, t3);
+        const d1b = manhattan(b, t1);
+        const d2b = manhattan(b, t2);
+        const d3b = manhattan(b, t3);
+        if (d1a === d1b && d2a === d2b && d3a === d3b) {
+          return { t1, t2, t3, d1: d1a, d2: d2a, d3: d3a };
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function passesStaticRules(h: Cell): boolean {
-  return !isCenterForbidden(h) && !isCornerTooFar(h);
+  return !isCenterForbidden(h) && !isCornerTooFar(h) && hasUniqueThreeTapLine(h);
 }
 
-const STATIC_VALID: Cell[] = allCells().filter(passesStaticRules);
+const PUBLISHABLE_POOL: Cell[] = ALL_CELLS.filter(passesStaticRules);
 
 export type RejectionReason =
   | "center"
@@ -101,12 +157,11 @@ export function rejectionReasons(
   h: Cell,
   prevH: Cell | null,
   nextH: Cell | null,
-  checkAmbiguous = prevH === null && nextH === null,
 ): RejectionReason[] {
   const reasons: RejectionReason[] = [];
   if (isCenterForbidden(h)) reasons.push("center");
   if (isCornerTooFar(h)) reasons.push("corner");
-  if (checkAmbiguous && hasAmbiguousTriple(h)) reasons.push("ambiguous-triple");
+  if (!hasUniqueThreeTapLine(h)) reasons.push("ambiguous-triple");
   if (prevH && prevH[0] === h[0] && prevH[1] === h[1]) reasons.push("same-as-prev-day");
   if (nextH && nextH[0] === h[0] && nextH[1] === h[1]) reasons.push("same-as-next-day");
   return reasons;
@@ -125,17 +180,18 @@ export function candidateFromHash(dateStr: string, attempt: number): Cell {
   return [h % GRID_SIZE, Math.floor(h / GRID_SIZE) % GRID_SIZE];
 }
 
-function pickFromValid(dateStr: string, attempt: number): Cell {
-  const idx = hashString(`PING:${dateStr}:${attempt}`) % STATIC_VALID.length;
-  return STATIC_VALID[idx];
+function pickFromPool(dateStr: string, attempt: number): Cell {
+  const idx = hashString(`PING:${dateStr}:${attempt}`) % PUBLISHABLE_POOL.length;
+  return PUBLISHABLE_POOL[idx];
 }
 
 const publishCache = new Map<string, Cell>();
 
 function generateForDate(dateStr: string, prevH: Cell): Cell {
   for (let attempt = 0; attempt < 10_000; attempt++) {
-    const h = pickFromValid(dateStr, attempt);
+    const h = pickFromPool(dateStr, attempt);
     if (prevH[0] === h[0] && prevH[1] === h[1]) continue;
+    if (!hasUniqueThreeTapLine(h)) continue;
     return h;
   }
 
@@ -190,4 +246,5 @@ export {
   isCornerTooFar,
   CENTER_CELLS,
   CORNERS,
+  allCells,
 };

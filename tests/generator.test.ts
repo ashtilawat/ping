@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   CENTER_CELLS,
   CORNERS,
+  cellsConsistentWithTriple,
+  findSharedThreeTapLine,
+  findUniqueThreeTapLine,
   generateH,
+  hasUniqueThreeTapLine,
   isCenterForbidden,
   isCornerTooFar,
   isPublishable,
   rejectionReasons,
-  sharesThreeTapTriple,
 } from "@/lib/generator";
-import { addUtcDays } from "@/lib/epoch";
+import { addUtcDays, PING_EPOCH_UTC } from "@/lib/epoch";
 import { manhattan } from "@/lib/manhattan";
 
 describe("generator", () => {
@@ -32,10 +35,53 @@ describe("generator", () => {
     expect(isCornerTooFar([3, 3])).toBe(false);
   });
 
-  it("rejects when two cells share a 3-tap distance triple", () => {
-    const symmetric = sharesThreeTapTriple([2, 2], [2, 8]);
-    if (symmetric) {
-      expect(isPublishable([2, 2], null, null)).toBe(false);
+  it("rejects known-ambiguous pair member from publishing", () => {
+    const a = [2, 2] as const;
+    const b = [2, 8] as const;
+
+    const shared = findSharedThreeTapLine(a, b);
+    expect(shared).not.toBeNull();
+
+    const ambiguousMatches = cellsConsistentWithTriple(
+      shared!.t1,
+      shared!.t2,
+      shared!.t3,
+      shared!.d1,
+      shared!.d2,
+      shared!.d3,
+    );
+    expect(ambiguousMatches.length).toBeGreaterThanOrEqual(2);
+    expect(ambiguousMatches).toContainEqual(a);
+    expect(ambiguousMatches).toContainEqual(b);
+
+    expect(isPublishable(a, null, null)).toBe(false);
+    expect(rejectionReasons(a, null, null)).toContain("corner");
+  });
+
+  it("rejects every H that lacks a uniquely identifying 3-tap line", () => {
+    const lackingUnique: Array<[number, number]> = [];
+    for (let r = 0; r < 12; r++) {
+      for (let c = 0; c < 12; c++) {
+        const h = [r, c] as [number, number];
+        if (!hasUniqueThreeTapLine(h)) lackingUnique.push(h);
+      }
+    }
+
+    expect(lackingUnique.map((h) => isPublishable(h, null, null))).toEqual(
+      lackingUnique.map(() => false),
+    );
+    expect(
+      lackingUnique.map((h) => rejectionReasons(h, null, null).includes("ambiguous-triple")),
+    ).toEqual(lackingUnique.map(() => true));
+  });
+
+  it("wires ambiguous-triple rejection to hasUniqueThreeTapLine for every cell", () => {
+    for (let r = 0; r < 12; r++) {
+      for (let c = 0; c < 12; c++) {
+        const h = [r, c] as [number, number];
+        const reasons = rejectionReasons(h, null, null);
+        expect(reasons.includes("ambiguous-triple")).toBe(!hasUniqueThreeTapLine(h));
+      }
     }
   });
 
@@ -46,11 +92,28 @@ describe("generator", () => {
     expect(h).not.toEqual(next);
   });
 
-  it("publishes a valid H for 2026-08-21", () => {
-    const h = generateH("2026-08-21");
-    expect(isPublishable(h, generateH("2026-08-20"), generateH("2026-08-22"))).toBe(
-      true,
-    );
-    expect(isCenterForbidden(h)).toBe(false);
+  it("generateH returns H uniquely recoverable by some 3-tap line", () => {
+    for (const dateStr of ["2025-01-01", "2026-03-15", "2026-08-21", "2026-11-01"]) {
+      const h = generateH(dateStr);
+      const witness = findUniqueThreeTapLine(h);
+      expect(witness).not.toBeNull();
+
+      const matches = cellsConsistentWithTriple(
+        witness!.t1,
+        witness!.t2,
+        witness!.t3,
+        witness!.d1,
+        witness!.d2,
+        witness!.d3,
+      );
+      expect(matches).toEqual([h]);
+
+      const prevH =
+        dateStr === PING_EPOCH_UTC ? null : generateH(addUtcDays(dateStr, -1));
+      expect(isPublishable(h, prevH, null)).toBe(true);
+      expect(isCenterForbidden(h)).toBe(false);
+      expect(isCornerTooFar(h)).toBe(false);
+      expect(hasUniqueThreeTapLine(h)).toBe(true);
+    }
   });
 });
