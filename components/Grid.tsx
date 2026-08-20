@@ -34,6 +34,7 @@ export function Grid({
     <div className="grid-wrap" data-testid={`board-${gridSize}`}>
       <div
         className="grid"
+        data-size={gridSize}
         style={{
           gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
           gridTemplateRows: `repeat(${gridSize}, 1fr)`,
@@ -61,6 +62,9 @@ export function Grid({
                   isWin ? "win-tap" : "",
                   isHiddenCell ? "hidden-reveal" : "",
                   locked ? "locked" : "",
+                  cell.tapped && cell.distance !== null && cell.distance >= 10
+                    ? "cell-two-digit"
+                    : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}

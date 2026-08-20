@@ -118,7 +118,7 @@ export default function Home() {
   const closest = closestDistance(activeBoard.taps);
   const boardLocked = activeBoard.locked;
 
-  let status: string;
+  let status: string | null = null;
   if (finished) {
     const wins = session.boards.filter((b) => b.won).length;
     status = wins === 3 ? "All signals found." : `${wins}/3 boards won.`;
@@ -130,8 +130,6 @@ export default function Home() {
     } else {
       status = "Out of taps.";
     }
-  } else {
-    status = `${tapsRemaining} tap${tapsRemaining === 1 ? "" : "s"} left`;
   }
 
   const shareBoards: BoardShareResult[] = session.boards.map((board, i) => ({
@@ -148,7 +146,15 @@ export default function Home() {
         <span className="header-spacer" aria-hidden="true" />
       </header>
 
-      <p className="tagline">{boardLabel(gridSize)} · 4 taps · 0 wins</p>
+      <p className="tagline">
+        {boardLabel(gridSize)}
+        {!finished && !boardLocked && (
+          <>
+            {" · "}
+            {tapsRemaining} tap{tapsRemaining === 1 ? "" : "s"} left
+          </>
+        )}
+      </p>
 
       <Grid
         gridSize={gridSize}
@@ -159,14 +165,16 @@ export default function Home() {
         revealHidden={boardLocked && !activeBoard.won}
       />
 
-      <p
-        className={["status", boardLocked && !activeBoard.won && !finished ? "status-lose" : ""]
-          .filter(Boolean)
-          .join(" ")}
-        aria-live="polite"
-      >
-        {status}
-      </p>
+      {status !== null && (
+        <p
+          className={["status", boardLocked && !activeBoard.won && !finished ? "status-lose" : ""]
+            .filter(Boolean)
+            .join(" ")}
+          aria-live="polite"
+        >
+          {status}
+        </p>
+      )}
 
       <ShareButton
         dateStr={dateStr}
