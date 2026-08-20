@@ -1,0 +1,126 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  background: #0f1117;
+  color: #e8eaed;
+}
+
+main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.rules {
+  margin: 0;
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #b0b8c4;
+  max-width: 36ch;
+}
+
+.status {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #8a93a3;
+}
+
+.grid {
+  display: grid;
+  gap: 3px;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2a3140;
+  border-radius: 4px;
+  background: #1a1f2b;
+  color: #7dd3fc;
+  font-size: clamp(0.65rem, 2.5vw, 0.9rem);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  transition: background 0.15s;
+}
+
+.cell:hover:not(:disabled) {
+  background: #242b3a;
+}
+
+.cell.tapped {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #bae6fd;
+}
+
+.cell.locked {
+  cursor: default;
+}
+
+.cell:disabled:not(.tapped) {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.share-button {
+  margin-top: 0.5rem;
+  padding: 0.65rem 1.75rem;
+  border: none;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-button:hover {
+  background: #2563eb;
+}
+
+.result {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.result.win {
+  color: #4ade80;
+}
+
+.result.lose {
+  color: #f87171;
+}
