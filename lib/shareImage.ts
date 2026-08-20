@@ -18,10 +18,10 @@ const BG = "#12141a";
 const CELL_EMPTY = "#252932";
 const CELL_BORDER = "#3d4450";
 const CELL_TAPPED = "#1a1d24";
-const RING = "#9aa3b0";
+const RING = "#5eead4";
 const TEXT = "#e4e6eb";
 const TEXT_DIM = "#8b919a";
-const WIN_RING = "#e4e6eb";
+const WIN_RING = "#2dd4bf";
 
 function tapAt(
   taps: BoardShareResult["taps"],
