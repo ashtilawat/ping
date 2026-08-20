@@ -1,23 +1,70 @@
+import { type BoardSize, maxManhattanDistance } from "./boards";
 import { type Cell, manhattan } from "./manhattan";
 import { addUtcDays, PING_EPOCH_UTC } from "./epoch";
 
+export { BOARD_SIZES } from "./boards";
+export type { BoardSize } from "./boards";
+
+/** @deprecated Use BOARD_SIZES[2] or pass an explicit board size. */
 export const GRID_SIZE = 12;
 
-const CENTER_CELLS: Cell[] = [
-  [5, 5],
-  [5, 6],
-  [6, 5],
-  [6, 6],
-];
+type GridRules = {
+  gridSize: BoardSize;
+  centerCells: Cell[];
+  centerMid: readonly [number, number];
+  centerForbiddenRadius: number;
+  corners: Cell[];
+  cornerMinDistance: number;
+  allCells: Cell[];
+};
 
-const CORNERS: Cell[] = [
-  [0, 0],
-  [0, 11],
-  [11, 0],
-  [11, 11],
-];
+function buildGridRules(gridSize: BoardSize): GridRules {
+  const mid = (gridSize - 1) / 2;
+  const low = Math.floor(mid);
+  const high = Math.ceil(mid);
+  const centerCells: Cell[] = [
+    [low, low],
+    [low, high],
+    [high, low],
+    [high, high],
+  ];
+  const corners: Cell[] = [
+    [0, 0],
+    [0, gridSize - 1],
+    [gridSize - 1, 0],
+    [gridSize - 1, gridSize - 1],
+  ];
+  const allCells: Cell[] = [];
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      allCells.push([r, c]);
+    }
+  }
 
-const CENTER_MID: readonly [number, number] = [5.5, 5.5];
+  return {
+    gridSize,
+    centerCells,
+    centerMid: [mid, mid],
+    centerForbiddenRadius: Math.max(0, Math.round((2 * gridSize) / 12)),
+    corners,
+    cornerMinDistance: Math.ceil(1.5 * gridSize),
+    allCells,
+  };
+}
+
+const RULES_BY_SIZE: Record<BoardSize, GridRules> = {
+  4: buildGridRules(4),
+  6: buildGridRules(6),
+  12: buildGridRules(12),
+};
+
+export function gridRules(gridSize: BoardSize): GridRules {
+  return RULES_BY_SIZE[gridSize];
+}
+
+/** 12×12 constants kept for tests that still target the large board. */
+export const CENTER_CELLS: Cell[] = RULES_BY_SIZE[12].centerCells;
+export const CORNERS: Cell[] = RULES_BY_SIZE[12].corners;
 
 export type GenerateOptions = {
   /** Skip publishing checks (test-only forced scoring). */
@@ -35,38 +82,19 @@ export type ThreeTapLine = {
   d3: number;
 };
 
-function allCells(): Cell[] {
-  const cells: Cell[] = [];
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      cells.push([r, c]);
-    }
-  }
-  return cells;
-}
-
-const ALL_CELLS = allCells();
-
-function hashString(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
 function manhattanToPoint(cell: Cell, point: readonly [number, number]): number {
   return Math.abs(cell[0] - point[0]) + Math.abs(cell[1] - point[1]);
 }
 
-function isCenterForbidden(h: Cell): boolean {
-  if (CENTER_CELLS.some(([r, c]) => r === h[0] && c === h[1])) return true;
-  return manhattanToPoint(h, CENTER_MID) <= 2;
+export function isCenterForbidden(h: Cell, gridSize: BoardSize = 12): boolean {
+  const rules = gridRules(gridSize);
+  if (rules.centerCells.some(([r, c]) => r === h[0] && c === h[1])) return true;
+  return manhattanToPoint(h, rules.centerMid) <= rules.centerForbiddenRadius;
 }
 
-function isCornerTooFar(h: Cell): boolean {
-  return CORNERS.some((corner) => manhattan(h, corner) >= 18);
+export function isCornerTooFar(h: Cell, gridSize: BoardSize = 12): boolean {
+  const rules = gridRules(gridSize);
+  return rules.corners.some((corner) => manhattan(h, corner) >= rules.cornerMinDistance);
 }
 
 /** Cells whose Manhattan readings on (t1,t2,t3) equal (d1,d2,d3). */
@@ -77,29 +105,32 @@ export function cellsConsistentWithTriple(
   d1: number,
   d2: number,
   d3: number,
+  gridSize: BoardSize = 12,
 ): Cell[] {
-  return ALL_CELLS.filter(
-    (h) =>
-      manhattan(h, t1) === d1 &&
-      manhattan(h, t2) === d2 &&
-      manhattan(h, t3) === d3,
+  const { allCells } = gridRules(gridSize);
+  return allCells.filter(
+    (cell) =>
+      manhattan(cell, t1) === d1 &&
+      manhattan(cell, t2) === d2 &&
+      manhattan(cell, t3) === d3,
   );
 }
 
 /** Some ordered tap triple yields readings consistent with exactly this cell. */
-export function findUniqueThreeTapLine(h: Cell): ThreeTapLine | null {
-  for (let i = 0; i < ALL_CELLS.length; i++) {
-    for (let j = 0; j < ALL_CELLS.length; j++) {
+export function findUniqueThreeTapLine(h: Cell, gridSize: BoardSize = 12): ThreeTapLine | null {
+  const { allCells } = gridRules(gridSize);
+  for (let i = 0; i < allCells.length; i++) {
+    for (let j = 0; j < allCells.length; j++) {
       if (j === i) continue;
-      for (let k = 0; k < ALL_CELLS.length; k++) {
+      for (let k = 0; k < allCells.length; k++) {
         if (k === i || k === j) continue;
-        const t1 = ALL_CELLS[i];
-        const t2 = ALL_CELLS[j];
-        const t3 = ALL_CELLS[k];
+        const t1 = allCells[i];
+        const t2 = allCells[j];
+        const t3 = allCells[k];
         const d1 = manhattan(h, t1);
         const d2 = manhattan(h, t2);
         const d3 = manhattan(h, t3);
-        const matches = cellsConsistentWithTriple(t1, t2, t3, d1, d2, d3);
+        const matches = cellsConsistentWithTriple(t1, t2, t3, d1, d2, d3, gridSize);
         if (matches.length === 1 && matches[0][0] === h[0] && matches[0][1] === h[1]) {
           return { t1, t2, t3, d1, d2, d3 };
         }
@@ -109,22 +140,27 @@ export function findUniqueThreeTapLine(h: Cell): ThreeTapLine | null {
   return null;
 }
 
-export function hasUniqueThreeTapLine(h: Cell): boolean {
-  return findUniqueThreeTapLine(h) !== null;
+export function hasUniqueThreeTapLine(h: Cell, gridSize: BoardSize = 12): boolean {
+  return findUniqueThreeTapLine(h, gridSize) !== null;
 }
 
 /** First tap triple where both cells produce identical (d1,d2,d3). */
-export function findSharedThreeTapLine(a: Cell, b: Cell): ThreeTapLine | null {
+export function findSharedThreeTapLine(
+  a: Cell,
+  b: Cell,
+  gridSize: BoardSize = 12,
+): ThreeTapLine | null {
   if (a[0] === b[0] && a[1] === b[1]) return null;
+  const { allCells } = gridRules(gridSize);
 
-  for (let i = 0; i < ALL_CELLS.length; i++) {
-    for (let j = 0; j < ALL_CELLS.length; j++) {
+  for (let i = 0; i < allCells.length; i++) {
+    for (let j = 0; j < allCells.length; j++) {
       if (j === i) continue;
-      for (let k = 0; k < ALL_CELLS.length; k++) {
+      for (let k = 0; k < allCells.length; k++) {
         if (k === i || k === j) continue;
-        const t1 = ALL_CELLS[i];
-        const t2 = ALL_CELLS[j];
-        const t3 = ALL_CELLS[k];
+        const t1 = allCells[i];
+        const t2 = allCells[j];
+        const t3 = allCells[k];
         const d1a = manhattan(a, t1);
         const d2a = manhattan(a, t2);
         const d3a = manhattan(a, t3);
@@ -140,11 +176,17 @@ export function findSharedThreeTapLine(a: Cell, b: Cell): ThreeTapLine | null {
   return null;
 }
 
-function passesStaticRules(h: Cell): boolean {
-  return !isCenterForbidden(h) && !isCornerTooFar(h) && hasUniqueThreeTapLine(h);
+function passesStaticRules(h: Cell, gridSize: BoardSize): boolean {
+  return (
+    !isCenterForbidden(h, gridSize) &&
+    !isCornerTooFar(h, gridSize) &&
+    hasUniqueThreeTapLine(h, gridSize)
+  );
 }
 
-const PUBLISHABLE_POOL: Cell[] = ALL_CELLS.filter(passesStaticRules);
+function publishablePool(gridSize: BoardSize): Cell[] {
+  return gridRules(gridSize).allCells.filter((cell) => passesStaticRules(cell, gridSize));
+}
 
 export type RejectionReason =
   | "center"
@@ -157,11 +199,12 @@ export function rejectionReasons(
   h: Cell,
   prevH: Cell | null,
   nextH: Cell | null,
+  gridSize: BoardSize = 12,
 ): RejectionReason[] {
   const reasons: RejectionReason[] = [];
-  if (isCenterForbidden(h)) reasons.push("center");
-  if (isCornerTooFar(h)) reasons.push("corner");
-  if (!hasUniqueThreeTapLine(h)) reasons.push("ambiguous-triple");
+  if (isCenterForbidden(h, gridSize)) reasons.push("center");
+  if (isCornerTooFar(h, gridSize)) reasons.push("corner");
+  if (!hasUniqueThreeTapLine(h, gridSize)) reasons.push("ambiguous-triple");
   if (prevH && prevH[0] === h[0] && prevH[1] === h[1]) reasons.push("same-as-prev-day");
   if (nextH && nextH[0] === h[0] && nextH[1] === h[1]) reasons.push("same-as-next-day");
   return reasons;
@@ -171,37 +214,57 @@ export function isPublishable(
   h: Cell,
   prevH: Cell | null = null,
   nextH: Cell | null = null,
+  gridSize: BoardSize = 12,
 ): boolean {
-  return rejectionReasons(h, prevH, nextH).length === 0;
+  return rejectionReasons(h, prevH, nextH, gridSize).length === 0;
 }
 
-export function candidateFromHash(dateStr: string, attempt: number): Cell {
-  const h = hashString(`PING:${dateStr}:${attempt}`);
-  return [h % GRID_SIZE, Math.floor(h / GRID_SIZE) % GRID_SIZE];
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
 }
 
-function pickFromPool(dateStr: string, attempt: number): Cell {
-  const idx = hashString(`PING:${dateStr}:${attempt}`) % PUBLISHABLE_POOL.length;
-  return PUBLISHABLE_POOL[idx];
+export function candidateFromHash(
+  dateStr: string,
+  attempt: number,
+  gridSize: BoardSize = 12,
+): Cell {
+  const h = hashString(`PING:${gridSize}:${dateStr}:${attempt}`);
+  return [h % gridSize, Math.floor(h / gridSize) % gridSize];
+}
+
+function pickFromPool(dateStr: string, attempt: number, gridSize: BoardSize): Cell {
+  const pool = publishablePool(gridSize);
+  const idx = hashString(`PING:${gridSize}:${dateStr}:${attempt}`) % pool.length;
+  return pool[idx];
 }
 
 const publishCache = new Map<string, Cell>();
 
-function generateForDate(dateStr: string, prevH: Cell): Cell {
+function cacheKey(dateStr: string, gridSize: BoardSize): string {
+  return `${gridSize}:${dateStr}`;
+}
+
+function generateForDate(dateStr: string, prevH: Cell, gridSize: BoardSize): Cell {
   for (let attempt = 0; attempt < 10_000; attempt++) {
-    const h = pickFromPool(dateStr, attempt);
+    const h = pickFromPool(dateStr, attempt, gridSize);
     if (prevH[0] === h[0] && prevH[1] === h[1]) continue;
-    if (!hasUniqueThreeTapLine(h)) continue;
+    if (!hasUniqueThreeTapLine(h, gridSize)) continue;
     return h;
   }
 
-  throw new Error(`No publishable H for ${dateStr}`);
+  throw new Error(`No publishable H for ${dateStr} on ${gridSize}×${gridSize}`);
 }
 
-function ensureGeneratedThrough(targetDate: string): void {
-  if (!publishCache.has(PING_EPOCH_UTC)) {
+function ensureGeneratedThrough(targetDate: string, gridSize: BoardSize): void {
+  const epochKey = cacheKey(PING_EPOCH_UTC, gridSize);
+  if (!publishCache.has(epochKey)) {
     const bootstrapPrev: Cell = [0, 0];
-    publishCache.set(PING_EPOCH_UTC, generateForDate(PING_EPOCH_UTC, bootstrapPrev));
+    publishCache.set(epochKey, generateForDate(PING_EPOCH_UTC, bootstrapPrev, gridSize));
   }
 
   let cursor = PING_EPOCH_UTC;
@@ -209,42 +272,49 @@ function ensureGeneratedThrough(targetDate: string): void {
 
   while (Date.parse(`${cursor}T00:00:00.000Z`) < targetMs) {
     const next = addUtcDays(cursor, 1);
-    if (!publishCache.has(next)) {
-      publishCache.set(next, generateForDate(next, publishCache.get(cursor)!));
+    const nextKey = cacheKey(next, gridSize);
+    if (!publishCache.has(nextKey)) {
+      publishCache.set(
+        nextKey,
+        generateForDate(next, publishCache.get(cacheKey(cursor, gridSize))!, gridSize),
+      );
     }
     cursor = next;
   }
 }
 
-/** Generate a publishable H for a UTC calendar date. */
-export function generateH(dateStr: string, opts: GenerateOptions = {}): Cell {
+/** Generate a publishable H for a UTC calendar date and board size. */
+export function generateH(
+  dateStr: string,
+  gridSize: BoardSize = 12,
+  opts: GenerateOptions = {},
+): Cell {
   if (opts.force) {
     return opts.force;
   }
 
   if (opts.prevH) {
-    return generateForDate(dateStr, opts.prevH);
+    return generateForDate(dateStr, opts.prevH, gridSize);
   }
 
-  ensureGeneratedThrough(dateStr);
+  ensureGeneratedThrough(dateStr, gridSize);
 
-  if (publishCache.has(dateStr)) {
-    return publishCache.get(dateStr)!;
+  const key = cacheKey(dateStr, gridSize);
+  if (publishCache.has(key)) {
+    return publishCache.get(key)!;
   }
 
-  const prev = publishCache.get(addUtcDays(dateStr, -1));
+  const prev = publishCache.get(cacheKey(addUtcDays(dateStr, -1), gridSize));
   if (!prev) {
     throw new Error(`Cannot generate H before ${PING_EPOCH_UTC}: ${dateStr}`);
   }
-  const h = generateForDate(dateStr, prev);
-  publishCache.set(dateStr, h);
+  const h = generateForDate(dateStr, prev, gridSize);
+  publishCache.set(key, h);
   return h;
 }
 
-export {
-  isCenterForbidden,
-  isCornerTooFar,
-  CENTER_CELLS,
-  CORNERS,
-  allCells,
-};
+export function allCells(gridSize: BoardSize = 12): Cell[] {
+  return gridRules(gridSize).allCells;
+}
+
+export { maxManhattanDistance };

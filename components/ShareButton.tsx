@@ -2,23 +2,22 @@
 
 import { useCallback, useState } from "react";
 import { buildShareImage } from "@/lib/shareImage";
-import { buildShareText, type TapRecord } from "@/lib/share";
+import { buildShareText, type BoardShareResult } from "@/lib/share";
 
 type ShareButtonProps = {
   dateStr: string;
-  taps: TapRecord[];
-  won: boolean;
+  boards: BoardShareResult[];
   finished: boolean;
 };
 
-export function ShareButton({ dateStr, taps, won, finished }: ShareButtonProps) {
+export function ShareButton({ dateStr, boards, finished }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = useCallback(async () => {
-    const text = buildShareText({ dateStr, taps, won });
+    const text = buildShareText({ dateStr, boards });
 
     try {
-      const imageBlob = await buildShareImage({ dateStr, taps, won });
+      const imageBlob = await buildShareImage({ dateStr, boards });
 
       if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
         await navigator.clipboard.write([
@@ -45,7 +44,7 @@ export function ShareButton({ dateStr, taps, won, finished }: ShareButtonProps) 
         /* clipboard unavailable */
       }
     }
-  }, [dateStr, taps, won]);
+  }, [dateStr, boards]);
 
   if (!finished) return null;
 
