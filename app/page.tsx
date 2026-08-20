@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid } from "@/components/Grid";
+import { HowToPlay, HowToPlayTrigger } from "@/components/HowToPlay";
 import { ShareButton } from "@/components/ShareButton";
 import { boardLabel } from "@/lib/boards";
 import { puzzleDateForInstant } from "@/lib/epoch";
@@ -45,6 +46,7 @@ export default function Home() {
   const [cellStates, setCellStates] = useState(() => emptyCellGrid(4));
   const [gridSize, setGridSize] = useState<4 | 6 | 12>(4);
   const [hydrated, setHydrated] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
 
   const boardIndex = activeBoardIndex(session);
   const activeBoard = session.boards[boardIndex];
@@ -141,7 +143,9 @@ export default function Home() {
   return (
     <main>
       <header className="header">
+        <HowToPlayTrigger onClick={() => setHowToOpen(true)} />
         <h1>PING</h1>
+        <span className="header-spacer" aria-hidden="true" />
       </header>
 
       <p className="tagline">{boardLabel(gridSize)} · 4 taps · 0 wins</p>
@@ -169,6 +173,8 @@ export default function Home() {
         boards={shareBoards}
         finished={finished}
       />
+
+      <HowToPlay open={howToOpen} onClose={() => setHowToOpen(false)} />
     </main>
   );
 }
